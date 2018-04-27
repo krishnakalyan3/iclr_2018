@@ -3,7 +3,8 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-
+from random import randint
+from time import sleep
 
 # TODO
 # Total Revisions
@@ -15,14 +16,18 @@ class Scraper(object):
 
     def __init__(self):
         self.url = 'https://iclr.cc/Conferences/2018/Schedule'
-        self.sleep_sec = 1
+        self.sleep_min = 0
+        self.sleep_max = 3
         self.count = 0
 
     def scrape_open_review(self, open_review_url):
-        print('url: {} count: {}'.format(open_review_url, self.count))
+        sleep_interval = randint(self.sleep_min, self.sleep_max)
+        sleep(sleep_interval)
+        print('url: {} count: {} sleep: {}'.format(open_review_url, self.count, sleep_interval))
         open_res = requests.get(open_review_url, headers={'User-Agent': 'Mozilla/5.0'})
         html = BeautifulSoup(open_res.content, 'html.parser')
         data = self.get_data(html)
+
         return data
 
     def get_data(self, data):
@@ -52,22 +57,23 @@ class Scraper(object):
         title = html.find_all("div", class_="maincard narrower {}".format(type))
         for item in title:
             self.count += 1
-            type = 'Oral'
             title = item.find("div", class_="maincardBody")
             authors = item.find("div", class_="maincardFooter")
-            url = item.find("a", class_="btn btn-default btn-xs href_PDF").get('href')
-            date, abstract, tldr, keywords = self.scrape_open_review(url)
 
-            data['type'].append(type)
-            data['title'].append(title.contents)
-            data['authors'].append(authors.contents)
-            data['url'].append(url)
-            data['submission_date'].append(date)
-            data['abstract'].append(abstract)
-            data['tldr'].append(tldr)
-            data['keywords'].append(keywords)
+            if not type == 'InvitedTalk':
+                url = item.find("a", class_="btn btn-default btn-xs href_PDF").get('href')
+                date, abstract, tldr, keywords = self.scrape_open_review(url)
 
-        return data
+                data['type'].append(type)
+                data['title'].append(title.contents)
+                data['authors'].append(authors.contents)
+                data['url'].append(url)
+                data['submission_date'].append(date)
+                data['abstract'].append(abstract)
+                data['tldr'].append(tldr)
+                data['keywords'].append(keywords)
+
+        return pd.DataFrame(data)
 
     def scrape_site(self):
         res = requests.get(self.url)
@@ -80,11 +86,10 @@ class Scraper(object):
             data_workshop = self.get_type_data(html, 'Workshop')
 
         data = pd.concat([data_oral, data_invited_talk, data_poster, data_workshop], axis=0)
-
         return pd.DataFrame(data)
 
 
 if __name__ == '__main__':
     scrape = Scraper()
     data = scrape.scrape_site()
-    data.to_csv('../data/oral.csv', index=False)
+    data.to_csv('../data/iclr.csv', index=False)
