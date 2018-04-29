@@ -65,8 +65,8 @@ class Scraper(object):
                 date, abstract, tldr, keywords = self.scrape_open_review(url)
 
                 data['type'].append(type)
-                data['title'].append(title.contents)
-                data['authors'].append(authors.contents)
+                data['title'].append(' '.join(title.contents))
+                data['authors'].append(' '.join(authors.contents))
                 data['url'].append(url)
                 data['submission_date'].append(date)
                 data['abstract'].append(abstract)
@@ -86,6 +86,8 @@ class Scraper(object):
             data_workshop = self.get_type_data(html, 'Workshop')
 
         data = pd.concat([data_oral, data_invited_talk, data_poster, data_workshop], axis=0)
+        data['index'] = data.index
+
         return pd.DataFrame(data)
 
 
